@@ -1,0 +1,172 @@
+Turbo Assembler	 Version 4.1	    02/09/26 25:18:10	    Page 1
+vidframe.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     org 100h
+      4
+      5	0100  B8 B800		     Start:  mov ax, 0B800h  ; initializing video memory segment register
+      6	0103  8E C0			     mov es, ax
+      7
+      8	0105  33 DB			     xor bx, bx
+      9	0107  BB 0370			     mov bx, 160 * 5 + 80  ; init video	segment	shift
+     10
+     11	010A  B6 24			     mov dh, 24h ; $ ASCII const
+     12
+     13	010C  BE 0190r			     mov si, offset String     ; string	to print addr -> si
+     14
+     15	010F  E8 006F			     call strlen   ; count string length procedure
+     16
+     17	0112  E8 0013			     call printFrame
+     18
+     19	0115  81 C3 00A0		     add bx, 160     ; move to next line
+     20
+     21	0119  E8 002F			     call printText
+     22
+     23	011C  81 C3 00A0		     add bx, 160     ; move to next line
+     24
+     25	0120  E8 0005			     call printFrame
+     26
+     27					     ; end programm interrupt
+     28	0123  B8 4C00			     mov ax, 4C00h
+     29	0126  CD 21			     int 21h
+     30
+     31	0128			     printFrame	PROC
+     32	0128  8B C1			     mov ax, cx
+     33	012A  05 0002			     add ax, 2
+     34
+     35	012D  BF 0001			     mov di, 1
+     36	0130				     frameCycleStart:
+     37
+     38	0130  26: C6 07	04		     mov byte ptr es:[bx], 04h
+     39	0134  26: C6 47	01 03		     mov byte ptr es:[bx + 1], 03h
+     40
+     41	0139  3B F8			     cmp di, ax
+     42	013B  74 06			     je	endFrameCycle
+     43
+     44	013D  47			     inc di
+     45	013E  83 C3 02			     add bx, 2
+     46
+     47	0141  EB ED			     jmp frameCycleStart
+     48
+     49	0143				     endFrameCycle:
+     50
+     51					     ; return bx start value
+     52	0143  2D 0001			     sub ax, 1
+     53	0146  03 C0			     add ax, ax
+     54	0148  2B D8			     sub bx, ax
+     55
+     56	014A  C3			     ret
+     57	014B			     printFrame	ENDP
+Turbo Assembler	 Version 4.1	    02/09/26 25:18:10	    Page 2
+vidframe.asm
+
+
+
+     58
+     59	014B			     printText PROC
+     60					     ; part of frame
+     61	014B  26: C6 07	04		     mov byte ptr es:[bx], 04h
+     62	014F  26: C6 47	01 03		     mov byte ptr es:[bx+1], 03h
+     63	0154  83 C3 02			     add bx, 2
+     64
+     65					     ; text to videomem
+     66	0157				     cycleStart:
+     67	0157  8A 24			     mov ah, [si]
+     68
+     69	0159  3A E6			     cmp ah, dh
+     70	015B  74 0E			     je	endStr
+     71	015D  26: 88 27			     mov byte ptr es:[bx], ah
+     72	0160  26: C6 47	01 15		     mov byte ptr es:[bx+1], 15h
+     73
+     74	0165  46			     inc si
+     75	0166  83 C3 02			     add bx, 2
+     76
+     77	0169  EB EC			     jmp cycleStart
+     78
+     79	016B				     endStr:
+     80
+     81					     ; part of frame
+     82	016B  26: C6 07	04		     mov byte ptr es:[bx], 04h
+     83	016F  26: C6 47	01 03		     mov byte ptr es:[bx+1], 03h
+     84	0174  83 C3 02			     add bx, 2
+     85
+     86					     ; return bx start value
+     87	0177  8B C1			     mov ax, cx
+     88	0179  05 0002			     add ax, 2
+     89	017C  03 C0			     add ax, ax
+     90	017E  2B D8			     sub bx, ax
+     91
+     92	0180  C3			     ret
+     93	0181			     printText ENDP
+     94
+     95	0181			     strlen PROC
+     96	0181  8B FE			     mov di, si
+     97	0183  33 C9			     xor cx, cx
+     98
+     99
+    100	0185				     strlenCycle:
+    101	0185  8A 25			     mov ah, [di]
+    102
+    103	0187  3A E6			     cmp ah, dh
+    104	0189  74 04			     je	strlenEnd
+    105	018B  47			     inc di
+    106
+    107	018C  41			     inc cx    ; increment symbols counter
+    108	018D  EB F6			     jmp strlenCycle
+    109	018F				     strlenEnd:
+    110	018F  C3			     ret
+    111	0190			     strlen ENDP
+    112
+    113	0190  48 65 6C 6C 6F 24	     String  db	'Hello$'
+    114
+Turbo Assembler	 Version 4.1	    02/09/26 25:18:10	    Page 3
+vidframe.asm
+
+
+
+    115				     end Start
+Turbo Assembler	 Version 4.1	    02/09/26 25:18:10	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/09/26"
+??FILENAME			  Text	 "vidframe"
+??TIME				  Text	 "25:18:10"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 VIDFRAME
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+CYCLESTART			  Near	 DGROUP:0157
+ENDFRAMECYCLE			  Near	 DGROUP:0143
+ENDSTR				  Near	 DGROUP:016B
+FRAMECYCLESTART			  Near	 DGROUP:0130
+PRINTFRAME			  Near	 DGROUP:0128
+PRINTTEXT			  Near	 DGROUP:014B
+START				  Near	 DGROUP:0100
+STRING				  Byte	 DGROUP:0190
+STRLEN				  Near	 DGROUP:0181
+STRLENCYCLE			  Near	 DGROUP:0185
+STRLENEND			  Near	 DGROUP:018F
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  0196 Word	  Public  CODE
+

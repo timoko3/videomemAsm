@@ -1,0 +1,64 @@
+Turbo Assembler	 Version 4.1	    02/09/26 22:00:40	    Page 1
+vidlinev.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     org 100h
+      4
+      5	0100  B8 B800		     Start:  mov ax, 0B800h
+      6	0103  8E C0			     mov es, ax
+      7
+      8	0105  33 DB			     xor bx, bx
+      9	0107  BB 0370			     mov bx, 160 * 5 + 80
+     10
+     11					     ;counter initialization
+     12	010A  33 C9			     xor cx, cx
+     13	010C  B9 0018			     mov cx, 24
+     14
+     15	010F				     drawVerticalLine:
+     16
+     17	010F  26: C6 07	03		     mov byte ptr es:[bx], 03h
+     18	0113  26: C6 47	01 04		     mov byte ptr es:[bx+1], 04h
+     19
+     20	0118  81 C3 00A0		     add bx, 160
+     21	011C  E2 F1			     loop drawVerticalLine
+     22
+     23	011E  B8 4C00			     mov ax, 4C00h
+     24	0121  CD 21			     int 21h
+     25
+     26				     end Start
+Turbo Assembler	 Version 4.1	    02/09/26 22:00:40	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/09/26"
+??FILENAME			  Text	 "vidlinev"
+??TIME				  Text	 "22:00:40"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 VIDLINEV
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+DRAWVERTICALLINE		  Near	 DGROUP:010F
+START				  Near	 DGROUP:0100
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  0123 Word	  Public  CODE
+
