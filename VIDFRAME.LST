@@ -1,4 +1,4 @@
-Turbo Assembler	 Version 4.1	    02/09/26 26:46:38	    Page 1
+Turbo Assembler	 Version 4.1	    02/11/26 20:18:26	    Page 1
 vidframe.asm
 
 
@@ -18,156 +18,282 @@ vidframe.asm
      13
      14					     ; read mode from cmd and put in dl	symbol for frame
      15
-     16	010C  E8 001C			     call getMode
+     16	010C  E8 0013			     call getMode
      17
-     18	010F  BE 01B2r			     mov si, offset String     ; string	to print addr -> si
-     19
-     20	0112  E8 008E			     call strlen   ; count string length procedure
-     21
-     22	0115  E8 0035			     call printFrame
+     18	010F  80 FA 30			     cmp dl, 0 + '0'
+     19	0112  75 06			     jne notComplicatedMode
+     20	0114  E8 0064				     call complicatedMode
+     21	0117  EB 04 90				     jmp endProgram
+     22	011A				     notComplicatedMode:
      23
-     24	0118  81 C3 00A0		     add bx, 160     ; move to next line
+     24	011A  E8 002D			     call basicMode
      25
-     26	011C  E8 0050			     call printText
-     27
-     28	011F  81 C3 00A0		     add bx, 160     ; move to next line
-     29
-     30	0123  E8 0027			     call printFrame
-     31
-     32					     ; end programm interrupt
-     33	0126  B8 4C00			     mov ax, 4C00h
-     34	0129  CD 21			     int 21h
+     26					     ; end programm interrupt
+     27	011D				     endProgram:
+     28	011D  B8 4C00			     mov ax, 4C00h
+     29	0120  CD 21			     int 21h
+     30
+     31	0122			     getMode PROC
+     32	0122  BE 0080			     mov si, 80h   ; write in si cmd len addr
+     33
+     34	0125  8A 14			     mov dl, [si]  ; write in dl temporary cmd length
      35
-     36	012B			     getMode PROC
-     37	012B  BE 0080			     mov si, 80h   ; write in si cmd len addr
-     38
-     39	012E  8A 14			     mov dl, [si]  ; write in dl temporary cmd length
-     40
-     41	0130  80 FA 00			     cmp dl, 0
-     42	0133  75 03			     jne skipNoMode   ;	handle the no mode case
-     43	0135					     wrongMode:	  ; jump here if number	don't match appropriate
-     44	0135  B2 04				     mov dl, 04h
-     45	0137  C3				     ret
-     46	0138				     skipNoMode:
+     36	0127  80 FA 00			     cmp dl, 0
+     37	012A  75 03			     jne skipNoMode   ;	handle the no mode case
+     38	012C					     wrongMode:	  ; jump here if number	don't match appropriate
+     39	012C  B2 04				     mov dl, 04h
+     40	012E  C3				     ret
+     41	012F				     skipNoMode:
+     42
+     43					     ; get mode	number
+     44
+     45	012F  BE 0082			     mov si, 82h
+     46	0132  8A 14			     mov dl, [si]
      47
-     48					     ; get mode	number
+     48					     ; handle mode number
      49
-     50	0138  BE 0082			     mov si, 82h
-     51	013B  8A 14			     mov dl, [si]
-     52
-     53					     ; handle mode number
+     50	0134  80 FA 30			     cmp dl, 0 + '0'
+     51	0137  75 01			     jne notZeroMode
+     52	0139  C3				     ret
+     53	013A				     notZeroMode:
      54
-     55	013D  80 FA 31			     cmp dl, 1 + '0'
-     56	0140  75 03			     jne notFirstMode
-     57	0142  B2 03				     mov dl, 03h
-Turbo Assembler	 Version 4.1	    02/09/26 26:46:38	    Page 2
+     55	013A  80 FA 31			     cmp dl, 1 + '0'
+     56	013D  75 03			     jne notFirstMode
+     57	013F  B2 03				     mov dl, 03h
+Turbo Assembler	 Version 4.1	    02/11/26 20:18:26	    Page 2
 vidframe.asm
 
 
 
      58
-     59	0144  C3				     ret
-     60	0145				     notFirstMode:
+     59	0141  C3				     ret
+     60	0142				     notFirstMode:
      61
-     62	0145  80 FA 32			     cmp dl, 2 + '0'
-     63	0148  75 EB			     jne wrongMode
-     64	014A  B2 05				     mov dl, 05h
+     62	0142  80 FA 32			     cmp dl, 2 + '0'
+     63	0145  75 E5			     jne wrongMode
+     64	0147  B2 05				     mov dl, 05h
      65
-     66	014C  C3				     ret
+     66	0149  C3				     ret
      67
-     68	014D			     getMode ENDP
+     68	014A			     getMode ENDP
      69
-     70	014D			     printFrame	PROC
-     71	014D  8B C1			     mov ax, cx
-     72	014F  05 0002			     add ax, 2
-     73
-     74	0152  BF 0001			     mov di, 1
-     75	0155				     frameCycleStart:
-     76
-     77	0155  26: 88 17			     mov byte ptr es:[bx], dl
-     78	0158  26: C6 47	01 03		     mov byte ptr es:[bx + 1], 03h
-     79
-     80	015D  3B F8			     cmp di, ax
-     81	015F  74 06			     je	endFrameCycle
+     70	014A			     basicMode PROC
+     71	014A  BE 0084			     mov si, 84h     ; string to print addr -> si
+     72
+     73	014D  E8 00C8			     call strlen   ; count string length procedure
+     74
+     75
+     76	0150  8B C1			     mov ax, cx
+     77	0152  05 0002			     add ax, 2
+     78	0155  E8 0092			     call printFrame
+     79	0158  E8 00D8			     call videoMemPointerMoveBack
+     80
+     81	015B  81 C3 00A0		     add bx, 160     ; move to next line
      82
-     83	0161  47			     inc di
-     84	0162  83 C3 02			     add bx, 2
-     85
-     86	0165  EB EE			     jmp frameCycleStart
-     87
-     88	0167				     endFrameCycle:
-     89
-     90					     ; return bx start value
-     91	0167  2D 0001			     sub ax, 1
-     92	016A  03 C0			     add ax, ax
-     93	016C  2B D8			     sub bx, ax
-     94
-     95	016E  C3			     ret
-     96	016F			     printFrame	ENDP
-     97
-     98	016F			     printText PROC
-     99					     ; part of frame
-    100	016F  26: 88 17			     mov byte ptr es:[bx], dl
-    101	0172  26: C6 47	01 03		     mov byte ptr es:[bx+1], 03h
-    102	0177  83 C3 02			     add bx, 2
-    103
-    104					     ; text to videomem
-    105	017A				     cycleStart:
-    106	017A  8A 24			     mov ah, [si]
-    107
-    108	017C  3A E6			     cmp ah, dh
-    109	017E  74 0E			     je	endStr
-    110	0180  26: 88 27			     mov byte ptr es:[bx], ah
-    111	0183  26: C6 47	01 15		     mov byte ptr es:[bx+1], 15h
-    112
-    113	0188  46			     inc si
-    114	0189  83 C3 02			     add bx, 2
-Turbo Assembler	 Version 4.1	    02/09/26 26:46:38	    Page 3
+     83
+     84	015F  E8 00C5			     call outSymbol	     ; part of frame
+     85	0162  E8 009E			     call printText
+     86	0165  E8 00BF			     call outSymbol	     ; part of frame
+     87	0168  E8 00C8			     call videoMemPointerMoveBack
+     88
+     89	016B  81 C3 00A0		     add bx, 160     ; move to next line
+     90
+     91	016F  8B C1			     mov ax, cx
+     92	0171  05 0002			     add ax, 2
+     93	0174  E8 0073			     call printFrame
+     94	0177  E8 00B9			     call videoMemPointerMoveBack
+     95
+     96	017A  C3			     ret
+     97	017B			     basicMode ENDP
+     98
+     99	017B			     complicatedMode PROC
+    100	017B  BE 008E			     mov si, 84h + 10 ;	get strlen
+    101	017E  E8 0097			     call strlen
+    102
+    103	0181  BE 0084			     mov si, 84h
+    104
+    105					     ; init cycle
+    106	0184  B0 06			     mov al, 6
+    107	0186  B4 01			     mov ah, 1
+    108
+    109	0188				     startComplicatedFrameCycle:
+    110	0188  3A E0			     cmp ah, al
+    111	018A  7D 2D			     jge endComplicatedFrameCycle
+    112	018C  50				     push ax
+    113	018D  E8 0044				     call findSymForStr
+    114
+Turbo Assembler	 Version 4.1	    02/11/26 20:18:26	    Page 3
 vidframe.asm
 
 
 
-    115
-    116	018C  EB EC			     jmp cycleStart
-    117
-    118	018E				     endStr:
-    119
-    120					     ; part of frame
-    121	018E  26: 88 17			     mov byte ptr es:[bx], dl
-    122	0191  26: C6 47	01 03		     mov byte ptr es:[bx+1], 03h
-    123	0196  83 C3 02			     add bx, 2
-    124
-    125					     ; return bx start value
-    126	0199  8B C1			     mov ax, cx
-    127	019B  05 0002			     add ax, 2
-    128	019E  03 C0			     add ax, ax
-    129	01A0  2B D8			     sub bx, ax
-    130
-    131	01A2  C3			     ret
-    132	01A3			     printText ENDP
-    133
-    134	01A3			     strlen PROC
-    135	01A3  8B FE			     mov di, si
-    136	01A5  33 C9			     xor cx, cx
-    137
-    138
-    139	01A7				     strlenCycle:
-    140	01A7  8A 25			     mov ah, [di]
-    141
-    142	01A9  3A E6			     cmp ah, dh
-    143	01AB  74 04			     je	strlenEnd
-    144	01AD  47			     inc di
-    145
-    146	01AE  41			     inc cx    ; increment symbols counter
-    147	01AF  EB F6			     jmp strlenCycle
-    148	01B1				     strlenEnd:
-    149	01B1  C3			     ret
-    150	01B2			     strlen ENDP
-    151
-    152	01B2  48 65 6C 6C 6F 24	     String  db	'Hello$'
-    153
-    154				     end Start
-Turbo Assembler	 Version 4.1	    02/09/26 26:46:38	    Page 4
+    115	0190  8A 14				     mov dl, [si]
+    116
+    117	0192  E8 0025				     call printStrPreamble
+    118
+    119	0195  80 FC 03				     cmp ah, 3
+    120	0198  75 0B				     jne notTextStr
+    121	019A  56					     push si
+    122	019B  BE 008E					     mov si, 84h + 10
+    123
+    124	019E  E8 0062					     call printText
+    125
+    126	01A1  5E					     pop si
+    127	01A2  EB 06 90					     jmp printedStr
+    128	01A5					     notTextStr:
+    129
+    130	01A5  8B C1				     mov ax, cx
+    131	01A7  E8 0040				     call printFrame
+    132
+    133	01AA					     printedStr:
+    134
+    135	01AA  E8 001A				     call printStrPostamble
+    136
+    137	01AD  E8 0083				     call videoMemPointerMoveBack
+    138	01B0  81 C3 00A0			     add bx, 160     ; move to next line
+    139
+    140	01B4  58				     pop ax
+    141	01B5  FE C4				     inc ah
+    142	01B7  EB CF			     jmp startComplicatedFrameCycle
+    143	01B9				     endComplicatedFrameCycle:
+    144
+    145	01B9  C3			     ret
+    146	01BA			     complicatedMode ENDP
+    147
+    148	01BA			     printStrPreamble PROC
+    149	01BA  E8 006A			     call outSymbol
+    150
+    151	01BD  46			     inc si
+    152	01BE  8A 14			     mov dl, [si]
+    153	01C0  E8 0064			     call outSymbol
+    154	01C3  E8 0061			     call outSymbol
+    155
+    156	01C6  C3			     ret
+    157	01C7			     printStrPreamble ENDP
+    158
+    159	01C7			     printStrPostamble PROC
+    160	01C7  E8 005D			     call outSymbol
+    161	01CA  E8 005A			     call outSymbol
+    162
+    163	01CD  46			     inc si
+    164	01CE  8A 14			     mov dl, [si]
+    165	01D0  E8 0054			     call outSymbol
+    166
+    167	01D3  C3			     ret
+    168	01D4			     printStrPostamble ENDP
+    169
+    170	01D4			     findSymForStr PROC
+    171	01D4  80 FC 01			     cmp ah, 1
+Turbo Assembler	 Version 4.1	    02/11/26 20:18:26	    Page 4
+vidframe.asm
+
+
+
+    172	01D7  75 04			     jne notFirst
+    173	01D9  BE 0084				     mov si, 84h
+    174	01DC  C3				     ret
+    175
+    176	01DD				     notFirst:
+    177	01DD  80 FC 05			     cmp ah, 5
+    178	01E0  75 04			     jne notSixth
+    179	01E2  BE 008A				     mov si, 84h + 6
+    180	01E5  C3				     ret
+    181	01E6				     notSixth:
+    182
+    183	01E6  BE 0087			     mov si, 84h + 3
+    184
+    185	01E9  C3			     ret
+    186	01EA			     findSymForStr ENDP
+    187
+    188	01EA			     printFrame	PROC
+    189
+    190	01EA  BF 0001			     mov di, 1
+    191	01ED				     frameCycleStart:
+    192
+    193	01ED  26: 88 17			     mov byte ptr es:[bx], dl
+    194	01F0  26: C6 47	01 03		     mov byte ptr es:[bx + 1], 03h
+    195
+    196	01F5  3B F8			     cmp di, ax
+    197	01F7  74 06			     je	endFrameCycle
+    198
+    199	01F9  47			     inc di
+    200	01FA  83 C3 02			     add bx, 2
+    201
+    202	01FD  EB EE			     jmp frameCycleStart
+    203
+    204	01FF				     endFrameCycle:
+    205
+    206	01FF  83 C3 02			     add bx, 2
+    207
+    208	0202  C3			     ret
+    209	0203			     printFrame	ENDP
+    210
+    211	0203			     printText PROC
+    212
+    213					     ; text to videomem
+    214	0203				     cycleStart:
+    215	0203  8A 24			     mov ah, [si]
+    216
+    217	0205  3A E6			     cmp ah, dh
+    218	0207  74 0E			     je	endStr
+    219	0209  26: 88 27			     mov byte ptr es:[bx], ah
+    220	020C  26: C6 47	01 15		     mov byte ptr es:[bx+1], 15h
+    221
+    222	0211  46			     inc si
+    223	0212  83 C3 02			     add bx, 2
+    224
+    225	0215  EB EC			     jmp cycleStart
+    226
+    227	0217				     endStr:
+    228
+Turbo Assembler	 Version 4.1	    02/11/26 20:18:26	    Page 5
+vidframe.asm
+
+
+
+    229	0217  C3			     ret
+    230	0218			     printText ENDP
+    231
+    232	0218			     strlen PROC
+    233	0218  8B FE			     mov di, si
+    234	021A  33 C9			     xor cx, cx
+    235
+    236
+    237	021C				     strlenCycle:
+    238	021C  8A 25			     mov ah, [di]
+    239
+    240	021E  3A E6			     cmp ah, dh
+    241	0220  74 04			     je	strlenEnd
+    242	0222  47			     inc di
+    243
+    244	0223  41			     inc cx    ; increment symbols counter
+    245	0224  EB F6			     jmp strlenCycle
+    246	0226				     strlenEnd:
+    247	0226  C3			     ret
+    248	0227			     strlen ENDP
+    249
+    250	0227			     outSymbol PROC
+    251	0227  26: 88 17			     mov byte ptr es:[bx], dl
+    252	022A  26: C6 47	01 03		     mov byte ptr es:[bx + 1], 03h
+    253	022F  83 C3 02			     add bx, 2
+    254
+    255	0232  C3			     ret
+    256	0233			     outSymbol ENDP
+    257
+    258	0233			     videoMemPointerMoveBack PROC
+    259	0233  8B C1			     mov ax, cx
+    260	0235  05 0006			     add ax, 6
+    261	0238  03 C0			     add ax, ax
+    262
+    263	023A  2B D8			     sub bx, ax
+    264
+    265	023C  C3			     ret
+    266	023D			     videoMemPointerMoveBack ENDP
+    267
+    268	023D  48 65 6C 6C 6F 24	     String  db	'Hello$'
+    269
+    270				     end Start
+Turbo Assembler	 Version 4.1	    02/11/26 20:18:26	    Page 6
 Symbol Table
 
 
@@ -175,9 +301,9 @@ Symbol Table
 
 Symbol Name			  Type	 Value
 
-??DATE				  Text	 "02/09/26"
+??DATE				  Text	 "02/11/26"
 ??FILENAME			  Text	 "vidframe"
-??TIME				  Text	 "26:46:38"
+??TIME				  Text	 "20:18:26"
 ??VERSION			  Number 040A
 @32BIT				  Text	 0
 @CODE				  Text	 DGROUP
@@ -191,25 +317,41 @@ Symbol Name			  Type	 Value
 @MODEL				  Text	 1
 @STACK				  Text	 DGROUP
 @WORDSIZE			  Text	 2
-CYCLESTART			  Near	 DGROUP:017A
-ENDFRAMECYCLE			  Near	 DGROUP:0167
-ENDSTR				  Near	 DGROUP:018E
-FRAMECYCLESTART			  Near	 DGROUP:0155
-GETMODE				  Near	 DGROUP:012B
-NOTFIRSTMODE			  Near	 DGROUP:0145
-PRINTFRAME			  Near	 DGROUP:014D
-PRINTTEXT			  Near	 DGROUP:016F
-SKIPNOMODE			  Near	 DGROUP:0138
+BASICMODE			  Near	 DGROUP:014A
+COMPLICATEDMODE			  Near	 DGROUP:017B
+CYCLESTART			  Near	 DGROUP:0203
+ENDCOMPLICATEDFRAMECYCLE	  Near	 DGROUP:01B9
+ENDFRAMECYCLE			  Near	 DGROUP:01FF
+ENDPROGRAM			  Near	 DGROUP:011D
+ENDSTR				  Near	 DGROUP:0217
+FINDSYMFORSTR			  Near	 DGROUP:01D4
+FRAMECYCLESTART			  Near	 DGROUP:01ED
+GETMODE				  Near	 DGROUP:0122
+NOTCOMPLICATEDMODE		  Near	 DGROUP:011A
+NOTFIRST			  Near	 DGROUP:01DD
+NOTFIRSTMODE			  Near	 DGROUP:0142
+NOTSIXTH			  Near	 DGROUP:01E6
+NOTTEXTSTR			  Near	 DGROUP:01A5
+NOTZEROMODE			  Near	 DGROUP:013A
+OUTSYMBOL			  Near	 DGROUP:0227
+PRINTEDSTR			  Near	 DGROUP:01AA
+PRINTFRAME			  Near	 DGROUP:01EA
+PRINTSTRPOSTAMBLE		  Near	 DGROUP:01C7
+PRINTSTRPREAMBLE		  Near	 DGROUP:01BA
+PRINTTEXT			  Near	 DGROUP:0203
+SKIPNOMODE			  Near	 DGROUP:012F
 START				  Near	 DGROUP:0100
-STRING				  Byte	 DGROUP:01B2
-STRLEN				  Near	 DGROUP:01A3
-STRLENCYCLE			  Near	 DGROUP:01A7
-STRLENEND			  Near	 DGROUP:01B1
-WRONGMODE			  Near	 DGROUP:0135
+STARTCOMPLICATEDFRAMECYCLE	  Near	 DGROUP:0188
+STRING				  Byte	 DGROUP:023D
+STRLEN				  Near	 DGROUP:0218
+STRLENCYCLE			  Near	 DGROUP:021C
+STRLENEND			  Near	 DGROUP:0226
+VIDEOMEMPOINTERMOVEBACK		  Near	 DGROUP:0233
+WRONGMODE			  Near	 DGROUP:012C
 
 Groups & Segments		  Bit Size Align  Combine Class
 
 DGROUP				  Group
   _DATA				  16  0000 Word	  Public  DATA
-  _TEXT				  16  01B8 Word	  Public  CODE
+  _TEXT				  16  0243 Word	  Public  CODE
 

@@ -15,21 +15,16 @@ Start:  mov ax, 0B800h  ; initializing video memory segment register
 
 	call getMode
 
-	mov si, offset String     ; string to print addr -> si
-	
-	call strlen   ; count string length procedure
-	
-	call printFrame
-	
-	add bx, 160	; move to next line
+	cmp dl, 0 + '0'
+	jne notComplicatedMode
+		call complicatedMode
+		jmp endProgram
+	notComplicatedMode:
 
-	call printText
-	
-	add bx, 160	; move to next line	
-
-	call printFrame
+	call basicMode
 	
 	; end programm interrupt
+	endProgram:
 	mov ax, 4C00h
 	int 21h	
 
@@ -52,6 +47,11 @@ getMode	PROC
 
 	; handle mode number
 
+	cmp dl, 0 + '0'
+	jne notZeroMode
+		ret
+	notZeroMode:
+
 	cmp dl, 1 + '0'
 	jne notFirstMode
 		mov dl, 03h
@@ -67,9 +67,125 @@ getMode	PROC
 
 getMode ENDP
 
-printFrame PROC
+basicMode PROC
+	mov si, 84h     ; string to print addr -> si
+	
+	call strlen   ; count string length procedure
+	
+
 	mov ax, cx
 	add ax, 2
+	call printFrame
+	call videoMemPointerMoveBack
+	
+	add bx, 160	; move to next line
+
+		
+	call outSymbol		; part of frame
+	call printText
+	call outSymbol 		; part of frame
+	call videoMemPointerMoveBack
+	
+	add bx, 160	; move to next line	
+
+	mov ax, cx
+	add ax, 2
+	call printFrame
+	call videoMemPointerMoveBack
+
+	ret
+basicMode ENDP
+
+complicatedMode PROC
+	mov si, 84h + 10 ; get strlen
+	call strlen
+
+	mov si, 84h
+
+	; init cycle
+	mov al, 6
+	mov ah, 1
+
+	startComplicatedFrameCycle:
+	cmp ah, al
+	jge endComplicatedFrameCycle
+		push ax
+		call findSymForStr
+
+		mov dl, [si]
+
+		call printStrPreamble
+
+		cmp ah, 3
+		jne notTextStr
+			push si
+			mov si, 84h + 10
+
+			call printText
+
+			pop si
+			jmp printedStr
+		notTextStr:
+
+		mov ax, cx
+		call printFrame
+
+		printedStr:
+
+		call printStrPostamble
+
+		call videoMemPointerMoveBack
+		add bx, 160	; move to next line	
+
+		pop ax
+		inc ah
+	jmp startComplicatedFrameCycle
+	endComplicatedFrameCycle:
+
+	ret
+complicatedMode ENDP
+
+printStrPreamble PROC
+	call outSymbol
+
+	inc si
+	mov dl, [si]
+	call outSymbol
+	call outSymbol
+
+	ret
+printStrPreamble ENDP
+
+printStrPostamble PROC
+	call outSymbol
+	call outSymbol
+
+	inc si
+	mov dl, [si]
+	call outSymbol
+
+	ret
+printStrPostamble ENDP
+
+findSymForStr PROC
+	cmp ah, 1
+	jne notFirst
+		mov si, 84h
+		ret
+
+	notFirst:
+	cmp ah, 5
+	jne notSixth
+		mov si, 84h + 6
+		ret
+	notSixth:
+
+	mov si, 84h + 3
+
+	ret
+findSymForStr ENDP
+
+printFrame PROC
 
 	mov di, 1
 	frameCycleStart:
@@ -86,20 +202,13 @@ printFrame PROC
 	jmp frameCycleStart
 
 	endFrameCycle:
-	
-	; return bx start value
-	sub ax, 1
-	add ax, ax 
-	sub bx, ax
+
+	add bx, 2
 
 	ret
 printFrame ENDP
 
 printText PROC
-	; part of frame
-	mov byte ptr es:[bx], dl
-	mov byte ptr es:[bx+1], 03h
-	add bx, 2
 
 	; text to videomem 
 	cycleStart:																																													
@@ -116,17 +225,6 @@ printText PROC
 	jmp cycleStart
 
 	endStr:
-
-	; part of frame
-	mov byte ptr es:[bx], dl
-	mov byte ptr es:[bx+1], 03h
-	add bx, 2
-
-	; return bx start value
-	mov ax, cx
-	add ax, 2
-	add ax, ax
-	sub bx, ax
 
 	ret
 printText ENDP
@@ -148,6 +246,24 @@ strlen PROC
 	strlenEnd:
 	ret
 strlen ENDP
+
+outSymbol PROC
+	mov byte ptr es:[bx], dl
+	mov byte ptr es:[bx + 1], 03h
+	add bx, 2
+
+	ret
+outSymbol ENDP
+
+videoMemPointerMoveBack PROC
+	mov ax, cx 
+	add ax, 6
+	add ax, ax
+
+	sub bx, ax
+
+	ret
+videoMemPointerMoveBack ENDP
 		
 String	db 'Hello$'
 
