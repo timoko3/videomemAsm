@@ -2,14 +2,22 @@
 .code
 .286
 org 100h
+radix 8
+
+COLOR 		  EQU 04h
+TEXT_COLOR	  EQU 15h
+
+NO_MODE_SYMB  EQU 04h
+MODE_ONE_SYMB EQU 03h
+MODE_TWO_SYMB EQU 05h
 
 Start:  mov ax, 0B800h  ; initializing video memory segment register
 	mov es, ax
 
 	xor bx, bx
-	mov bx, 160 * 5 + 80  ; init video segment shift
+	mov bx, 160 * 5 + 70 + 10 ; init video segment shift  
 		
-	mov dh, 24h ; $ ASCII const
+	mov dh, 24h ; $ ASCII endStrSym 
 	
 	; read mode from cmd and put in dl symbol for frame
 
@@ -36,7 +44,7 @@ getMode	PROC
 	cmp dl, 0
 	jne skipNoMode	 ; handle the no mode case 
 		wrongMode:   ; jump here if number don't match appropriate
-		mov dl, 04h
+		mov dl, NO_MODE_SYMB
 		ret
 	skipNoMode:
 	
@@ -54,14 +62,14 @@ getMode	PROC
 
 	cmp dl, 1 + '0'
 	jne notFirstMode
-		mov dl, 03h
+		mov dl, MODE_ONE_SYMB
 
 		ret
 	notFirstMode:
 	
 	cmp dl, 2 + '0'
 	jne wrongMode 
-		mov dl, 05h
+		mov dl, MODE_TWO_SYMB
 
 		ret
 
@@ -71,19 +79,26 @@ basicMode PROC
 	mov si, 84h     ; string to print addr -> si
 	
 	call strlen   ; count string length procedure
-	
 
 	mov ax, cx
 	add ax, 2
+	add ax, ax
+	call alignFrame
+	
+	mov ax, cx
+	add ax, 2
 	call printFrame
+
+	mov di, 2
 	call videoMemPointerMoveBack
 	
 	add bx, 160	; move to next line
 
-		
 	call outSymbol		; part of frame
 	call printText
 	call outSymbol 		; part of frame
+
+	mov di, 2
 	call videoMemPointerMoveBack
 	
 	add bx, 160	; move to next line	
@@ -91,6 +106,8 @@ basicMode PROC
 	mov ax, cx
 	add ax, 2
 	call printFrame
+
+	mov di, 2
 	call videoMemPointerMoveBack
 
 	ret
@@ -101,6 +118,12 @@ complicatedMode PROC
 	call strlen
 
 	mov si, 84h
+
+	; put align num in ax
+	mov ax, cx
+	add ax, 6
+	add ax, ax
+	call alignFrame
 
 	; init cycle
 	mov al, 6
@@ -134,6 +157,7 @@ complicatedMode PROC
 
 		call printStrPostamble
 
+		mov di, 6
 		call videoMemPointerMoveBack
 		add bx, 160	; move to next line	
 
@@ -191,7 +215,7 @@ printFrame PROC
 	frameCycleStart:
 
 	mov byte ptr es:[bx], dl
-	mov byte ptr es:[bx + 1], 03h
+	mov byte ptr es:[bx + 1], COLOR
 
 	cmp di, ax
 	je endFrameCycle
@@ -217,7 +241,7 @@ printText PROC
 	cmp ah, dh 
 	je endStr			
 	mov byte ptr es:[bx], ah
-	mov byte ptr es:[bx+1], 15h
+	mov byte ptr es:[bx+1], TEXT_COLOR
 
 	inc si
 	add bx, 2
@@ -249,7 +273,7 @@ strlen ENDP
 
 outSymbol PROC
 	mov byte ptr es:[bx], dl
-	mov byte ptr es:[bx + 1], 03h
+	mov byte ptr es:[bx + 1], COLOR
 	add bx, 2
 
 	ret
@@ -257,13 +281,21 @@ outSymbol ENDP
 
 videoMemPointerMoveBack PROC
 	mov ax, cx 
-	add ax, 6
+	add ax, di
 	add ax, ax
 
 	sub bx, ax
 
+	xor ch, ch
 	ret
 videoMemPointerMoveBack ENDP
+
+alignFrame PROC
+	shr ax, 2
+	shl ax, 1
+	sub bx, ax
+	ret
+alignFrame ENDP
 		
 String	db 'Hello$'
 
