@@ -273,12 +273,13 @@ animationMode PROC
 			call outSymbol
 
 			pop dx
+			
+			xor ax, ax
+			mov al, dh
+			shl ax, 1        ; ax = dh * 2
+			sub bx, ax
 
-			mov ah, dh
-			sub bl, ah
-			sub bl, ah
 			add bx, 160	; move to next line	
-
 			
 			pop ax
 			inc ah
@@ -303,7 +304,8 @@ animationMode ENDP
 ; Animation string with text handle
 ; Entry: si = symbol to print addr
 ; Exit:  nop
-; Exp:   nop
+; Exp:   zf = 0 means length str is even
+;		 zf = 1 means length str is odd
 ; Destr: dl, si, bx, ah
 ;-----------------------------------------------------------------------
 
@@ -325,6 +327,11 @@ animationTextStrCase PROC
 	call outSymbol
 	call outSymbol
 
+	test cx, 1			
+	jz ??not_odd
+		call outSymbol
+	??not_odd:
+
 	ret
 animationTextStrCase ENDP
 
@@ -339,8 +346,16 @@ animationTextStrCase ENDP
 getAnimationIterationsCount PROC
 	xor ax, ax
 	mov al, cl
+
+	test al, 1
+
+	jz ??isEven
+		add al, 7d
+		jmp ??end
+	??isEven:
 	add al, 6d
 
+	??end:
 	ret
 getAnimationIterationsCount ENDP
 
@@ -561,7 +576,5 @@ delayForAnimation PROC
 		loop delay
 	ret
 delayForAnimation ENDP
-		
-String	db 'Hello$'
 
 end Start
