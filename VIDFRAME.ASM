@@ -3,8 +3,8 @@
 .286
 org 100h
 
-COLOR 		  EQU 04h
-TEXT_COLOR	  EQU 15h
+COLOR 		  EQU 0dh
+TEXT_COLOR	  EQU 5Eh
 
 NO_MODE_SYMB  EQU 04h
 MODE_ONE_SYMB EQU 03h
@@ -264,6 +264,7 @@ animationMode PROC
 			xor ax, ax
 			mov al, dh
 			sub al, 2d
+			
 			call printFrame
 
 			printedStr2:
@@ -426,6 +427,7 @@ findSymForStr ENDP
 ;-----------------------------------------------------------------------
 ; puts string of symbol to videoMem
 ; Entry: dl = symbol to print with
+;		 dh = color code
 ;		 ax = amount symbols to print
 ; Exit:  nop 
 ; Exp:   nop 
