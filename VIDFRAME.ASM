@@ -174,7 +174,7 @@ complicatedMode PROC
 			pop si
 			jmp printedStr
 		notTextStr:
-
+		
 		mov ax, cx
 		call printFrame
 
