@@ -405,7 +405,7 @@ printCompModeStrPostamble ENDP
 ;-----------------------------------------------------------------------
 ; pareses current needed symbols of frame from cmd line
 ; Entry: ah = current str to print
-;		 dx = last str 
+;		 al = last str 
 ; Exit:  si = pointer to the needed symbol in cmd line
 ; Exp:   nop
 ; Destr: si
@@ -418,14 +418,18 @@ findSymForStr PROC
 		ret
 
 	notFirst:
-	cmp ah, dl
-	jne notSixth
+	sub al, 1
+	cmp ah, al
+	
+	jne notLast
 		mov si, 84h + 6
-		ret
-	notSixth:
+		jmp ??end
+	notLast:
 
 	mov si, 84h + 3
 
+	??end:
+	add al, 1
 	ret
 findSymForStr ENDP
 
