@@ -202,8 +202,6 @@ complicatedMode ENDP
 ; Destr: ax, bx, cx, dx, di, si
 ;-----------------------------------------------------------------------
 
-AMOUNT_ANIMATION_ITERATIONS EQU 14
-
 animationMode PROC
 	mov si, TEXT_START_ADDR ; get strlen
 	call strlen
