@@ -3,21 +3,24 @@
 .286
 org 100h
 
-COLOR 		  EQU 0dh
-TEXT_COLOR	  EQU 5Eh
+COLOR 		  		EQU 0dh
+TEXT_COLOR	  		EQU 5Eh
 
-NO_MODE_SYMB  EQU 04h
-MODE_ONE_SYMB EQU 03h
-MODE_TWO_SYMB EQU 05h
+NO_MODE_SYMB  		EQU 04h
+MODE_ONE_SYMB 		EQU 03h
+MODE_TWO_SYMB 		EQU 05h
+
+NEW_LINE_SYMB 		EQU '#'
+END_STR_INPUT_SYMB	EQU '$'
 
 Start:  mov ax, 0B800h  ; initializing video memory segment register
 	mov es, ax
 
 	xor bx, bx
-	mov bx, 160 * 5 + 80; init video segment shift  
+	mov bx, 160d * 5d + 80d; init video segment shift  
 		
 	mov dh, 24h ; $ ASCII endStrSym 
-	
+
 	; read mode from cmd and put in dl symbol for frame
 
 	call chooseMode
@@ -204,14 +207,17 @@ complicatedMode ENDP
 
 animationMode PROC
 	mov si, TEXT_START_ADDR ; get strlen
-	call strlen
+	call countLineMaxLen
 
+	xor ah, ah
+	mov di, ax
 	call getAnimationIterationsCount
 	
 	mov dl, al   ; al contains AMOUNT_ANIMATION_ITERATIONS
 	xor dh, dh
 	add dh, 2d
 
+	mov cx, di
 	StartAnimationCycle:
 	cmp dh, al
 	jg endAnimationCycle
@@ -230,7 +236,9 @@ animationMode PROC
 		call alignFrame
 
 		; init cycle
-		mov al, 6d
+		mov ax, 5d
+		add ax, cx
+
 		mov ah, 1d
 
 		startComplicatedFrameCycle2:
@@ -238,6 +246,7 @@ animationMode PROC
 		jge endComplicatedFrameCycle2
 			push ax
 			push dx
+
 			call findSymForStr
 
 			mov dl, [si]
@@ -250,6 +259,7 @@ animationMode PROC
 				cmp dh, dl
 				push dx
 				jl notTextStr2
+				
 
 				call animationTextStrCase
 
@@ -302,6 +312,7 @@ animationMode ENDP
 ;-----------------------------------------------------------------------
 ; Animation string with text handle
 ; Entry: si = symbol to print addr
+;		 cx = len line
 ; Exit:  nop
 ; Exp:   zf = 0 means length str is even
 ;		 zf = 1 means length str is odd
@@ -326,11 +337,6 @@ animationTextStrCase PROC
 	call outSymbol
 	call outSymbol
 
-	test cx, 1			
-	jz ??not_odd
-		call outSymbol
-	??not_odd:
-
 	ret
 animationTextStrCase ENDP
 
@@ -346,15 +352,8 @@ getAnimationIterationsCount PROC
 	xor ax, ax
 	mov al, cl
 
-	test al, 1
-
-	jz ??isEven
-		add al, 7d
-		jmp ??end
-	??isEven:
 	add al, 6d
 
-	??end:
 	ret
 getAnimationIterationsCount ENDP
 
@@ -399,6 +398,7 @@ printCompModeStrPostamble ENDP
 ;-----------------------------------------------------------------------
 ; pareses current needed symbols of frame from cmd line
 ; Entry: ah = current str to print
+;		 dx = last str 
 ; Exit:  si = pointer to the needed symbol in cmd line
 ; Exp:   nop
 ; Destr: si
@@ -411,7 +411,7 @@ findSymForStr PROC
 		ret
 
 	notFirst:
-	cmp ah, 5
+	cmp ah, dl
 	jne notSixth
 		mov si, 84h + 6
 		ret
@@ -483,6 +483,49 @@ printText PROC
 printText ENDP
 
 ;-----------------------------------------------------------------------
+; counts max line len
+; Entry: si = pointer to the begin of str
+; Exit:  cx = max length line
+;		 al = amount lines 		
+; Exp:   dh = ensStr symbol ASCII code
+; Destr: ax, cx, di, si
+;-----------------------------------------------------------------------
+
+countLineMaxLen PROC
+	push bx 
+	push dx
+	xor bx, bx
+
+	mov dh, NEW_LINE_SYMB
+	??cycleStart:
+
+	call strlen
+	mov si, di
+
+	cmp bx, cx
+	jg ??notGreaterLine
+		mov bx, cx
+	??notGreaterLine:
+
+	inc al 
+
+	mov dl, [si]
+	cmp dl, END_STR_INPUT_SYMB
+	je ??cycleEnd
+
+	jmp ??cycleStart
+	
+	??cycleEnd:
+
+	xor ah, ah
+	mov cx, bx
+
+	pop dx
+	pop bx
+	ret
+countLineMaxLen ENDP
+
+;-----------------------------------------------------------------------
 ; counts amount of symbols in str with endStr symbol '$'
 ; Entry: si = pointer to the begin of str
 ; Exit:  cx = length str
@@ -498,6 +541,8 @@ strlen PROC
 	mov ah, [di]
 
 	cmp ah, dh
+	je strlenEnd
+	cmp ah, END_STR_INPUT_SYMB
 	je strlenEnd
 	inc di
 
