@@ -215,7 +215,14 @@ animationMode PROC
 	
 	mov dl, al   ; al contains AMOUNT_ANIMATION_ITERATIONS
 	xor dh, dh
+	
+	test cx, 1			
+	jz ??not_odd
+		add dh, 3d
+		jmp ??is_odd
+	??not_odd:
 	add dh, 2d
+	??is_odd:
 
 	mov cx, di
 	StartAnimationCycle:
