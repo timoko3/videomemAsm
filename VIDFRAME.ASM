@@ -206,23 +206,9 @@ complicatedMode ENDP
 ;-----------------------------------------------------------------------
 
 animationMode PROC
-	mov si, TEXT_START_ADDR ; get strlen
-	call countLineMaxLen
+	call initAnimation
 
-	xor ah, ah
-	mov di, ax
-	call getAnimationIterationsCount
-	
-	mov dl, al   ; al contains AMOUNT_ANIMATION_ITERATIONS
-	xor dh, dh
-	
-	test cx, 1			
-	jz ??not_odd
-		add dh, 3d
-		jmp ??is_odd
-	??not_odd:
-	add dh, 2d
-	??is_odd:
+	call calcStartStep
 
 	mov cx, di
 	StartAnimationCycle:
@@ -235,77 +221,7 @@ animationMode PROC
 		xor bx, bx
 	    mov bx, 160 * 5 + 80; init video segment shift  
 
-		; put align num in ax
-
-		xor ax, ax
-		mov al, dh
-		add al, al
-		call alignFrame
-
-		; init cycle
-		mov ax, 5d
-		add ax, cx
-
-		mov ah, 1d
-
-		startComplicatedFrameCycle2:
-		cmp ah, al
-		jge endComplicatedFrameCycle2
-			push ax
-			push dx
-
-			call findSymForStr
-
-			mov dl, [si]
-			add si, 1d
-			call outSymbol
-
-			cmp ah, 3d
-			jne notTextStr2
-				pop dx
-				cmp dh, dl
-				push dx
-				jl notTextStr2
-				
-
-				call animationTextStrCase
-
-				jmp printedStr2
-			notTextStr2:
-
-			mov dl, [si]
-			add si, 1d
-
-			xor ax, ax
-			mov al, dh
-			sub al, 2d
-			
-			call printFrame
-
-			printedStr2:
-
-			mov dl, [si]
-
-			call outSymbol
-
-			pop dx
-			
-			xor ax, ax
-			mov al, dh
-			shl ax, 1        ; ax = dh * 2
-			sub bx, ax
-
-			add bx, 160	; move to next line	
-			
-			pop ax
-			inc ah
-		jmp startComplicatedFrameCycle2
-		endComplicatedFrameCycle2:
-
-		push cx
-		mov cx, 65000d
-		call delayForAnimation
-		pop cx
+		call animationDrawFrame
 
 		add dh, 2
 
@@ -315,6 +231,117 @@ animationMode PROC
 
 	ret
 animationMode ENDP
+
+initAnimation PROC
+    mov si, TEXT_START_ADDR
+    call countLineMaxLen
+    mov di, ax
+    call getAnimationIterationsCount
+    mov dl, al
+    ret
+initAnimation ENDP
+
+calcStartStep PROC
+	xor dh, dh
+	
+	test cx, 1			
+	jz ??not_odd
+		add dh, 3d
+		jmp ??is_odd
+	??not_odd:
+	add dh, 2d
+	??is_odd:
+	ret
+calcStartStep ENDP
+
+animationDrawFrame PROC
+	; put align num in ax
+	xor ax, ax
+	mov al, dh
+	add al, al
+	call alignFrame
+
+	call animationDrawFrameLines
+
+	push cx
+	mov cx, 65000d
+	call delayForAnimation
+	pop cx
+
+	ret
+animationDrawFrame ENDP
+
+animationDrawFrameLines PROC
+	; init cycle
+	mov ax, 5d
+	add ax, cx
+	mov ah,1
+	lineLoop:
+		cmp ah, al
+		jge done
+
+		call animationDrawSingleLine
+
+		inc ah
+		jmp lineLoop
+	done:
+		ret
+animationDrawFrameLines ENDP
+
+animationDrawSingleLine PROC
+	push ax
+	push dx
+	call findSymForStr
+
+	mov dl, [si]
+	add si, 1d
+	call outSymbol
+
+	; special text case
+	cmp ah, 3d
+	jne notTextStr2
+		pop dx
+		cmp dh, dl
+		push dx
+		jl notTextStr2
+		
+
+		call animationTextStrCase
+
+		jmp printedStr2
+	notTextStr2:
+
+	mov dl, [si]
+	add si, 1d
+
+	xor ax, ax
+	mov al, dh
+	sub al, 2d
+	
+	call printFrame
+
+	printedStr2:
+
+	mov dl, [si]
+
+	call outSymbol
+
+	pop dx
+	pop ax 
+	ret
+animationDrawSingleLine ENDP
+
+moveBaseToNextLineStartPos PROC
+			
+	xor ax, ax
+	mov al, dh
+	shl ax, 1        ; ax = dh * 2
+	sub bx, ax
+
+	add bx, 160	; move to next line	
+
+	ret
+moveBaseToNextLineStartPos ENDP
 
 ;-----------------------------------------------------------------------
 ; Animation string with text handle
@@ -338,12 +365,13 @@ animationTextStrCase PROC
 	mov  si, TEXT_START_ADDR
 
 	call printText
+	mov di, si
 
 	pop si
 
 	call outSymbol
 	call outSymbol
-
+	
 	ret
 animationTextStrCase ENDP
 
@@ -479,12 +507,14 @@ printText PROC
 	mov ah, [si]
 
 	cmp ah, dh 
-	je endStr			
-	mov byte ptr es:[bx], ah
-	mov byte ptr es:[bx+1], TEXT_COLOR
+	je endStr
+		cmp ah, NEW_LINE_SYMB
+		je endStr:				
+			mov byte ptr es:[bx], ah
+			mov byte ptr es:[bx+1], TEXT_COLOR
 
-	inc si
-	add bx, 2
+			inc si
+			add bx, 2
 
 	jmp cycleStart
 
@@ -524,6 +554,7 @@ countLineMaxLen PROC
 	cmp dl, END_STR_INPUT_SYMB
 	je ??cycleEnd
 
+	inc si
 	jmp ??cycleStart
 	
 	??cycleEnd:
