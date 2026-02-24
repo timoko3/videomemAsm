@@ -198,7 +198,7 @@ complicatedMode PROC
 complicatedMode ENDP
 
 ;-----------------------------------------------------------------------
-; Drawing complicated version of frame with additional parameter in cmd line
+; makes frame animation
 ; Entry: dh = ensStr symbol
 ; Exit:  nop
 ; Exp:   nop
@@ -210,7 +210,7 @@ animationMode PROC
 
 	call calcStartStep
 
-	mov cx, di
+	; mov cx, di
 	StartAnimationCycle:
 	cmp dh, al
 	jg endAnimationCycle
@@ -272,13 +272,64 @@ animationDrawFrame PROC
 animationDrawFrame ENDP
 
 animationDrawFrameLines PROC
+	
+
 	; init cycle
-	mov ax, 5d
-	add ax, cx
+	mov ax, 4d + 1d
+	add ax, di 
 	mov ah,1
 	lineLoop:
 		cmp ah, al
 		jge done
+		
+		
+		push bx
+		call countTextStartLine
+		cmp ah, bl
+		pop bx
+
+		jne notTextStr2
+		
+
+			cmp dh, dl
+			jl notTextStr2
+
+			mov si , TEXT_START_ADDR
+			??textPrintCycle:
+			cmp di , 0d
+			jle ??printedStr
+				push ax 
+				push dx
+				push di
+				mov di, si
+
+				call startFrameLine
+
+				call animationDrawText
+
+				call endFrameLine
+
+				mov si, di
+				pop di
+
+				pop dx
+				call moveBaseToNextLineStartPos
+				push dx
+				
+
+				dec di
+
+				pop dx
+				pop ax 
+				inc ah
+			jmp ??textPrintCycle
+			
+			??printedStr:
+			pop dx
+
+			jmp lineLoop
+			; ret
+		notTextStr2:
 
 		call animationDrawSingleLine
 
@@ -291,25 +342,8 @@ animationDrawFrameLines ENDP
 animationDrawSingleLine PROC
 	push ax
 	push dx
-	call findSymForStr
 
-	mov dl, [si]
-	add si, 1d
-	call outSymbol
-
-	; special text case
-	cmp ah, 3d
-	jne notTextStr2
-		pop dx
-		cmp dh, dl
-		push dx
-		jl notTextStr2
-		
-
-		call animationTextStrCase
-
-		jmp printedStr2
-	notTextStr2:
+	call startFrameLine
 
 	mov dl, [si]
 	add si, 1d
@@ -318,15 +352,16 @@ animationDrawSingleLine PROC
 	mov al, dh
 	sub al, 2d
 	
+	push di
 	call printFrame
+	pop di
 
-	printedStr2:
-
-	mov dl, [si]
-
-	call outSymbol
+	call endFrameLine
 
 	pop dx
+
+	call moveBaseToNextLineStartPos
+
 	pop ax 
 	ret
 animationDrawSingleLine ENDP
@@ -343,17 +378,47 @@ moveBaseToNextLineStartPos PROC
 	ret
 moveBaseToNextLineStartPos ENDP
 
+startFrameLine PROC
+	call findSymForStr
+
+	mov dl, [si]
+	add si, 1d
+	call outSymbol
+
+	ret
+startFrameLine ENDP
+
+endFrameLine PROC
+	mov dl, [si]
+	call outSymbol
+
+	ret
+endFrameLine ENDP
+
+
+countTextStartLine PROC
+	xor bx, bx
+
+	mov bl, al
+
+	shr bl, 2
+	shl bl, 1
+
+	ret
+countTextStartLine ENDP
+
 ;-----------------------------------------------------------------------
 ; Animation string with text handle
 ; Entry: si = symbol to print addr
-;		 cx = len line
+;		 cx = len text space in line
+; 		 di = addr text in memory
 ; Exit:  nop
 ; Exp:   zf = 0 means length str is even
 ;		 zf = 1 means length str is odd
-; Destr: dl, si, bx, ah
+; Destr: dl, si, bx, ah, di, cx
 ;-----------------------------------------------------------------------
 
-animationTextStrCase PROC
+animationDrawText PROC
 	mov dl, [si]
 	call outSymbol
 	call outSymbol
@@ -361,19 +426,32 @@ animationTextStrCase PROC
 
 	mov dh, '$'
 
+	push cx
+
 	push si
-	mov  si, TEXT_START_ADDR
+	mov  si, di
 
 	call printText
+	add si, 1d  ;skip # symbol
 	mov di, si
 
 	pop si
 
+	??beginFillFreeSpace:
+	cmp cx, 0d
+	jle ??endedFillFreeSpace
+		call outSymbol
+		dec cx
+	jmp ??beginFillFreeSpace
+	??endedFillFreeSpace:
+
 	call outSymbol
 	call outSymbol
 	
+	pop cx
+
 	ret
-animationTextStrCase ENDP
+animationDrawText ENDP
 
 ;-----------------------------------------------------------------------
 ; finds amount of animation iterations
@@ -494,10 +572,10 @@ printFrame ENDP
 ;-----------------------------------------------------------------------
 ; puts string to videoMem
 ; Entry: Entry: si = pointer to the begin of str
-; Exit:  nop 
+; Exit:  cx = amountNotFilledSpace 
 ; Exp:   dh = ensStr symbol ASCII code
 ;		 
-; Destr: ah, si, bx 
+; Destr: ah, si, bx, cx
 ;-----------------------------------------------------------------------
 
 printText PROC
@@ -509,13 +587,14 @@ printText PROC
 	cmp ah, dh 
 	je endStr
 		cmp ah, NEW_LINE_SYMB
-		je endStr:				
+		je endStr				
 			mov byte ptr es:[bx], ah
 			mov byte ptr es:[bx+1], TEXT_COLOR
 
 			inc si
 			add bx, 2
 
+			dec cx
 	jmp cycleStart
 
 	endStr:
