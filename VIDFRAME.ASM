@@ -289,46 +289,11 @@ animationDrawFrameLines PROC
 		pop bx
 
 		jne notTextStr2
-		
-
 			cmp dh, dl
 			jl notTextStr2
 
-			mov si , TEXT_START_ADDR
-			??textPrintCycle:
-			cmp di , 0d
-			jle ??printedStr
-				push ax 
-				push dx
-				push di
-				mov di, si
-
-				call startFrameLine
-
-				call animationDrawText
-
-				call endFrameLine
-
-				mov si, di
-				pop di
-
-				pop dx
-				call moveBaseToNextLineStartPos
-				push dx
-				
-
-				dec di
-
-				pop dx
-				pop ax 
-				inc ah
-			jmp ??textPrintCycle
+			call animationSpecialTextCase
 			
-			??printedStr:
-			pop dx
-
-			jmp lineLoop
-			; ret
 		notTextStr2:
 
 		call animationDrawSingleLine
@@ -338,6 +303,42 @@ animationDrawFrameLines PROC
 	done:
 		ret
 animationDrawFrameLines ENDP
+
+animationSpecialTextCase PROC
+	mov si , TEXT_START_ADDR
+	??textPrintCycle:
+	cmp di , 0d
+	jle ??printedStr
+		push ax 
+		push dx
+		push di
+		mov di, si
+
+		call startFrameLine
+
+		call animationDrawText
+
+		call endFrameLine
+
+		mov si, di
+		pop di
+
+		pop dx
+		call moveBaseToNextLineStartPos
+		push dx
+		
+
+		dec di
+
+		pop dx
+		pop ax 
+		inc ah
+	jmp ??textPrintCycle
+	
+	??printedStr:
+
+	ret
+animationSpecialTextCase ENDP
 
 animationDrawSingleLine PROC
 	push ax
