@@ -232,6 +232,17 @@ animationMode PROC
 	ret
 animationMode ENDP
 
+;-----------------------------------------------------------------------
+; puts appropriate parameters in mem and counts amount of frames to start animation  
+; Entry: no
+; Exit:  si = start addr of text in mem
+; 		 di = amount of text lines
+;		 cx = max text line length
+;		 dl = amount of animation frames
+; Exp:   no
+; Destr: si, dl, di, ax,cx
+;-----------------------------------------------------------------------
+
 initAnimation PROC
     mov si, TEXT_START_ADDR
     call countLineMaxLen
@@ -240,6 +251,14 @@ initAnimation PROC
     mov dl, al
     ret
 initAnimation ENDP
+
+;-----------------------------------------------------------------------
+; calculates start step of animation
+; Entry: no
+; Exit:  dh = start step of animation
+; Exp:   no
+; Destr: dh
+;-----------------------------------------------------------------------
 
 calcStartStep PROC
 	xor dh, dh
@@ -253,6 +272,14 @@ calcStartStep PROC
 	??is_odd:
 	ret
 calcStartStep ENDP
+
+;-----------------------------------------------------------------------
+; draws frame in animation
+; Entry: dh = current frame index 
+; Exit:  no
+; Exp:   nop
+; Destr: ax, bx, si, di 
+;-----------------------------------------------------------------------
 
 animationDrawFrame PROC
 	; put align num in ax
@@ -271,9 +298,15 @@ animationDrawFrame PROC
 	ret
 animationDrawFrame ENDP
 
-animationDrawFrameLines PROC
-	
+;-----------------------------------------------------------------------
+; draws animation frame line 
+; Entry: nop
+; Exit:  dl = symbol if basicMode chosen
+; Exp:   nop
+; Destr: ax, bx, si, di 
+;-----------------------------------------------------------------------
 
+animationDrawFrameLines PROC
 	; init cycle
 	mov ax, 4d + 1d
 	add ax, di 
@@ -284,7 +317,7 @@ animationDrawFrameLines PROC
 		
 		
 		push bx
-		call countTextStartLine
+		mov bl, 3d 
 		cmp ah, bl
 		pop bx
 
@@ -303,6 +336,15 @@ animationDrawFrameLines PROC
 	done:
 		ret
 animationDrawFrameLines ENDP
+
+;-----------------------------------------------------------------------
+; draws end of frame line
+; Entry: di = amount of text lines to print
+;		 al = last str 
+; Exit:  no
+; Exp:   nop
+; Destr: ah, si, di, bx
+;-----------------------------------------------------------------------
 
 animationSpecialTextCase PROC
 	mov si , TEXT_START_ADDR
@@ -340,6 +382,15 @@ animationSpecialTextCase PROC
 	ret
 animationSpecialTextCase ENDP
 
+;-----------------------------------------------------------------------
+; draws not textLine 
+; Entry: bx = video mem pointer
+;		 si = pointer for symbol to print with 
+; Exit:  no
+; Exp:   nop
+; Destr: bx
+;-----------------------------------------------------------------------
+
 animationDrawSingleLine PROC
 	push ax
 	push dx
@@ -367,6 +418,15 @@ animationDrawSingleLine PROC
 	ret
 animationDrawSingleLine ENDP
 
+;-----------------------------------------------------------------------
+; puts drawing pointer to the start of the next line
+; Entry: dh = current frame Index
+;		 al = last str 
+; Exit:  no
+; Exp:   nop
+; Destr: ax, dx, bx
+;-----------------------------------------------------------------------
+
 moveBaseToNextLineStartPos PROC
 			
 	xor ax, ax
@@ -379,6 +439,15 @@ moveBaseToNextLineStartPos PROC
 	ret
 moveBaseToNextLineStartPos ENDP
 
+;-----------------------------------------------------------------------
+; draws start of frame line
+; Entry: ah = current str to print
+;		 al = last str 
+; Exit:  no
+; Exp:   nop
+; Destr: si, dl
+;-----------------------------------------------------------------------
+
 startFrameLine PROC
 	call findSymForStr
 
@@ -389,24 +458,20 @@ startFrameLine PROC
 	ret
 startFrameLine ENDP
 
+;-----------------------------------------------------------------------
+; draws end of frame line
+; Entry: si = addr of symbol to draw with
+; Exit:  no
+; Exp:   no
+; Destr: dl, bx
+;-----------------------------------------------------------------------
+
 endFrameLine PROC
 	mov dl, [si]
 	call outSymbol
 
 	ret
 endFrameLine ENDP
-
-
-countTextStartLine PROC
-	xor bx, bx
-
-	mov bl, al
-
-	shr bl, 2
-	shl bl, 1
-
-	ret
-countTextStartLine ENDP
 
 ;-----------------------------------------------------------------------
 ; Animation string with text handle
